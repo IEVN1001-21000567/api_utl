@@ -1,14 +1,16 @@
 from flask import Flask, request, jsonify
 from flask_mysqldb import MySQL
+from flask_cors import CORS, cross_origin
 from config import config
 
+
 """
-GET, POST, PUT, DELETE
+GET,POST,PUT,DELETE
 """
 
 app = Flask(__name__)
-
-con = MySQL(app)
+CORS(app)#http://localhost:4200/verAlumnos
+con=MySQL(app)
 
 @app.route("/alumnos", methods=['GET'])
 def lista_alumnos():
@@ -54,21 +56,25 @@ def obtener_alumno(mat):
             return jsonify({'alumno': None, 'mensaje': 'Alumno no encontrado', 'exito': False})
     except Exception as ex:
         return jsonify({"message": "error {}".format(ex), 'exito': False}), 500
-
+    
 @app.route("/alumnos",methods=['POST'])
 def registrar_alumno():
     try:
         alumno=leer_alumno_bd(request.json['matricula'])
         if alumno != None:
-            return jsonify({'mensaje': 'Alumno ya existe, no se puede duplicar', 'exito': True})
+            return jsonify({'mensaje':"Alumno ya existe, no se puede duplicar",'exito':False})
         else:
             cursor=con.connection.cursor()
-            sql="""INSERT into alumnos (matricula,nombre,apaterno,amaterno,correo) values ('{0}','{1}','{2}','{3}','{4}')""".format(request.json['maatricula'],request.json['nombre'], request.json['apaterno'],request.json['amaterno'], request.json['correo'])
-            cursor.execute(sql)
+            sql="INSERT INTO alumnos (matricula, nombre, apaterno, amaterno, correo) values ('{0}','{1}','{2}','{3}','{4}')".format(request.json['matricula'],request.json['nombre'],request.json['apaterno'],request.json['amaterno'],request.json['correo'])
+            cursor.execuse(sql)
             con.connection.commit()
             return jsonify({'mensaje':"Alumno registrado","exito":True})
+        
     except Exception as ex:
-        return jsonify({'mensaje':"Error",'exito':False})
+        return jsonify({'mensaje':"Error",'exito': False})
+
+def pagina_no_encontrada(error):
+    return "<h1>Pagina no encontrada</h1>", 404
 
 @app.route('/alumnos/<mat>', methods=['PUT'])
 def actualizar_curso(mat):
@@ -76,37 +82,33 @@ def actualizar_curso(mat):
         try:
             alumno = leer_alumno_bd(mat)
             if alumno != None:
-                cursor = conexion.connection.cursor()
+                cursor = con.connection.cursor()
                 sql = """UPDATE alumnos SET nombre = '{0}', apaterno = '{1}', amaterno='{2}', correo='{3}'
                 WHERE matricula = {4}""".format(request.json['nombre'], request.json['apaterno'], request.json['amaterno'],request.json['correo'], mat)
                 cursor.execute(sql)
-                conexion.connection.commit()  # Confirma la acción de actualización.
+                con.connection.commit()  # Confirma la acción de actualización.
                 return jsonify({'mensaje': "Alumno actualizado.", 'exito': True})
             else:
                 return jsonify({'mensaje': "Alumno no encontrado.", 'exito': False})
         except Exception as ex:
             return jsonify({'mensaje': "Error {0} ".format(ex), 'exito': False})
     #else:
-     #   return jsonify({'mensaje': "Parámetros inválidos...", 'exito': False})
- 
- 
+    #   return jsonify({'mensaje': "Parámetros inválidos...", 'exito': False})
 @app.route('/alumnos/<mat>', methods=['DELETE'])
 def eliminar_curso(mat):
     try:
         alumno = leer_alumno_bd(mat)
         if alumno != None:
-            cursor = conexion.connection.cursor()
+            cursor = con.connection.cursor()
             sql = "DELETE FROM alumnos WHERE matricula = {0}".format(mat)
             cursor.execute(sql)
-            conexion.connection.commit()  # Confirma la acción de eliminación.
+            con.connection.commit()  # Confirma la acción de eliminación.
             return jsonify({'mensaje': "Alumno eliminado.", 'exito': True})
         else:
             return jsonify({'mensaje': "Alumno no encontrado.", 'exito': False})
     except Exception as ex:
         return jsonify({'mensaje': "Error", 'exito': False})
-
-def pagina_no_encontrada(error):
-    return "<h1>Pagina no encontrada</h1>", 404
+        
 
 if __name__ == "__main__":
     app.config.from_object(config['development'])
